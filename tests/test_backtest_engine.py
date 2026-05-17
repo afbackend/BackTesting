@@ -188,3 +188,16 @@ def test_signal_metadata_is_not_shared_with_trade():
 
     meta["key"] = "changed"
     assert trades[0].metadata["key"] == "value"
+
+
+def test_signal_with_unknown_timestamp_is_skipped(caplog):
+    import logging
+    data = make_data([100.0] * 10)
+    unknown_ts = pd.Timestamp("2099-01-01")
+    s = Signal(timestamp=unknown_ts, direction=Direction.LONG)
+
+    with caplog.at_level(logging.WARNING, logger="backtester.core.backtest_engine"):
+        trades = run_backtest(data, [s], holding=4, fee_model=FeeModel())
+
+    assert len(trades) == 0
+    assert any("not in data index" in msg for msg in caplog.messages)

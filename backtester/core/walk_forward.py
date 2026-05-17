@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
@@ -7,6 +7,7 @@ import pandas as pd
 from backtester.core.backtest_engine import run_backtest
 from backtester.core.bt_types import BacktestResult
 from backtester.core.fee_model import FeeModel
+from backtester.strategy.base import Strategy
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class WalkForwardConfig:
 
 def walk_forward(
     data: pd.DataFrame,
-    strategy,
+    strategy: Strategy,
     fee_model: FeeModel,
     config: WalkForwardConfig,
 ) -> List[BacktestResult]:
