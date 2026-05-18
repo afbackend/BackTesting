@@ -161,6 +161,40 @@ results = walk_forward(
 
 ---
 
+## Testing
+
+![Tests](https://img.shields.io/badge/tests-140%20passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-99.59%25-brightgreen)
+
+```bash
+pytest --cov=backtester --cov-fail-under=90
+```
+
+CI runs on every push via GitHub Actions (`.github/workflows/tests.yml`).
+
+---
+
+## Implementation status
+
+| Module | Status | Description |
+|---|---|---|
+| `core/bt_types.py` | ✅ | Signal, Trade, BacktestResult, Direction |
+| `core/fee_model.py` | ✅ | Round-trip fee + slippage |
+| `core/backtest_engine.py` | ✅ | Trade execution loop |
+| `core/walk_forward.py` | ✅ | Walk-forward validation — main entry point |
+| `strategy/base.py` | ✅ | Abstract Strategy interface |
+| `metrics/performance.py` | ✅ | Win rate, Sharpe, Sortino, profit factor |
+| `metrics/risk.py` | ✅ | Drawdown, MAE, consecutive loss |
+| `metrics/statistical.py` | ✅ | One-tailed t-test, p-value, 95% CI |
+| `data/loader.py` | ✅ | Load local parquet files |
+| `data/validator.py` | ✅ | Detect NaN, duplicates, gaps |
+| `config.py` | ✅ | Global parameters with defaults |
+| `report/generator.py` | ✅ | Markdown report with auto conclusion |
+| `cli.py` / `run.py` | ✅ | CLI entry point |
+| `data/fetcher.py` | ⬜ | Fetch from exchanges with retry |
+| `strategy/examples/funding_rate.py` | ⬜ | H3 reference implementation |
+
+---
+
 ## Framework guarantees
 
 | Guarantee | Implementation |
