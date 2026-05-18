@@ -7,6 +7,9 @@ import pandas as pd
 from backtester.core.backtest_engine import run_backtest
 from backtester.core.bt_types import BacktestResult
 from backtester.core.fee_model import FeeModel
+from backtester.metrics.performance import calculate_performance
+from backtester.metrics.risk import calculate_risk
+from backtester.metrics.statistical import calculate_statistical
 from backtester.strategy.base import Strategy
 
 logger = logging.getLogger(__name__)
@@ -80,7 +83,11 @@ def walk_forward(
 
         results.append(BacktestResult(
             trades=trades,
-            metrics={},
+            metrics={
+                "performance": calculate_performance(trades),
+                "risk": calculate_risk(trades),
+                "statistical": calculate_statistical(trades),
+            },
             config={
                 "window": window_index,
                 "train_start": str(train.index[0]),

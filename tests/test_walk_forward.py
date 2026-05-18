@@ -206,3 +206,32 @@ def test_empty_data_returns_no_results():
     results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), config)
 
     assert len(results) == 0
+
+
+# --- metrics populated ---
+
+def test_metrics_has_three_keys():
+    data = make_data(300)
+    config = WalkForwardConfig(train_size=100, test_size=50, step_size=50, min_trades_per_window=1)
+    results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), config)
+
+    for r in results:
+        assert set(r.metrics.keys()) == {"performance", "risk", "statistical"}
+
+
+def test_metrics_performance_win_rate_is_float():
+    data = make_data(300)
+    config = WalkForwardConfig(train_size=100, test_size=50, step_size=50, min_trades_per_window=1)
+    results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), config)
+
+    for r in results:
+        assert isinstance(r.metrics["performance"]["win_rate"], float)
+
+
+def test_metrics_statistical_n_trades_matches_trades():
+    data = make_data(300)
+    config = WalkForwardConfig(train_size=100, test_size=50, step_size=50, min_trades_per_window=1)
+    results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), config)
+
+    for r in results:
+        assert r.metrics["statistical"]["n_trades"] == len(r.trades)
