@@ -31,23 +31,31 @@ def fetch_ohlcv(
     if exchange_id not in ccxt.exchanges:
         raise ValueError(f"Unknown exchange: {exchange_id!r}. Available: ccxt.exchanges")
 
-    exchange = getattr(ccxt, exchange_id)()
+    exchange = getattr(ccxt, exchange_id)({"enableRateLimit": True})
+    timeframe_ms = int(exchange.parse_timeframe(timeframe)) * 1000
 
     start_ms = int(pd.Timestamp(start).value // 1_000_000)
     end_ms = int(pd.Timestamp(end).value // 1_000_000)
 
     all_candles: list = []
     cursor = start_ms
+    prev_last_ts = -1
 
     while True:
         batch = _fetch_with_retry(exchange, symbol, timeframe, cursor, max_retries, retry_delay)
         if not batch:
             break
-        all_candles.extend(batch)
         last_ts = batch[-1][0]
+        if last_ts <= prev_last_ts:
+            raise RuntimeError(
+                f"Cursor did not advance (last_ts={last_ts}, prev={prev_last_ts}). "
+                "Possible exchange bug or stale data."
+            )
+        all_candles.extend(batch)
+        prev_last_ts = last_ts
         if last_ts >= end_ms:
             break
-        cursor = last_ts + 1
+        cursor = last_ts + timeframe_ms
 
     if not all_candles:
         return pd.DataFrame(columns=_OHLCV_COLUMNS)

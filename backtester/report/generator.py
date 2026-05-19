@@ -1,8 +1,12 @@
 from datetime import date
 from typing import Dict, List, Optional
 
+import pandas as pd
+
 from backtester.config import FrameworkConfig
 from backtester.core.bt_types import BacktestResult
+from backtester.core.fee_model import FeeModel
+from backtester.metrics.baselines import buy_and_hold, random_entry
 from backtester.metrics.performance import calculate_performance
 from backtester.metrics.risk import calculate_risk
 from backtester.metrics.statistical import calculate_statistical
@@ -13,11 +17,17 @@ def generate_report(
     strategy_name: str,
     config: FrameworkConfig,
     data_info: Optional[Dict] = None,
+    data: Optional[pd.DataFrame] = None,
+    fee_model: Optional[FeeModel] = None,
 ) -> str:
     """
     Generate a markdown validation report from walk-forward results.
 
     data_info optional keys: symbol, timeframe, start, end, total_candles.
+    When `data` is provided, the report includes a real baseline comparison
+    (buy-and-hold + random entry) and adds a 'beats random entry' criterion
+    to the verdict. Without `data`, the baseline section is marked unavailable.
+
     Returns a markdown string; the caller decides where to write it.
     """
     sections = [_header(strategy_name, results)]
@@ -30,11 +40,23 @@ def generate_report(
         )
         return "\n".join(sections)
 
+    baselines: Optional[Dict] = None
+    if data is not None:
+        if fee_model is None:
+            fee_model = FeeModel(
+                taker_fee=config.taker_fee,
+                slippage_estimate=config.slippage_estimate,
+            )
+        baselines = {
+            "buy_and_hold": buy_and_hold(results, data, fee_model),
+            "random_entry": random_entry(results, data, fee_model),
+        }
+
     sections.append(_section_walk_forward(results))
     sections.append(_section_statistical(results, config))
     sections.append(_section_risk(results))
-    sections.append(_section_baselines())
-    sections.append(_section_conclusion(results, config))
+    sections.append(_section_baselines(baselines))
+    sections.append(_section_conclusion(results, config, baselines))
 
     return "\n".join(sections)
 
@@ -147,11 +169,33 @@ def _section_risk(results: List[BacktestResult]) -> str:
     return "\n".join(lines)
 
 
-def _section_baselines() -> str:
-    return "## 5. Baseline Comparison\n\n> Baselines not implemented in v1.0.\n"
+def _section_baselines(baselines: Optional[Dict]) -> str:
+    if baselines is None:
+        return (
+            "## 5. Baseline Comparison\n\n"
+            "> Baselines unavailable: `data` parameter not provided to generate_report().\n"
+        )
+
+    bh = baselines["buy_and_hold"]
+    re = baselines["random_entry"]
+    return (
+        "## 5. Baseline Comparison\n\n"
+        "**Buy-and-hold (one trade per window, with fee)**\n\n"
+        f"- mean per-window return: {bh['mean_return']:.3%}\n"
+        f"- total compounded return: {bh['total_return']:.3%}\n\n"
+        f"**Random entry ({re['n_simulations']} simulations, matched trade count and holding)**\n\n"
+        f"- mean total return: {re['mean_total_return']:.3%}\n"
+        f"- median total return: {re['median_total_return']:.3%}\n"
+        f"- p5–p95 range: {re['p5_total_return']:.3%} to {re['p95_total_return']:.3%}\n"
+        f"- p-value (strategy vs random, one-tailed): {re['p_value_vs_strategy']:.4f}\n"
+    )
 
 
-def _section_conclusion(results: List[BacktestResult], config: FrameworkConfig) -> str:
+def _section_conclusion(
+    results: List[BacktestResult],
+    config: FrameworkConfig,
+    baselines: Optional[Dict] = None,
+) -> str:
     all_trades = [t for r in results for t in r.trades]
     gp = calculate_performance(all_trades)
     gr = calculate_risk(all_trades)
@@ -192,6 +236,15 @@ def _section_conclusion(results: List[BacktestResult], config: FrameworkConfig) 
             sig_pct >= 0.60,
         ),
     ]
+
+    if baselines is not None:
+        p_vs_random = baselines["random_entry"]["p_value_vs_strategy"]
+        criteria.append((
+            "beats random entry (p < 0.05)",
+            f"{p_vs_random:.4f}",
+            "0.0500",
+            p_vs_random < 0.05,
+        ))
 
     all_pass = all(c[3] for c in criteria)
     verdict = "**APPROVED** ✓" if all_pass else "**REJECTED** ✗"
