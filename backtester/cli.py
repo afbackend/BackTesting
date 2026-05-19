@@ -109,7 +109,14 @@ def _run(args: argparse.Namespace) -> int:
             "end": str(df.index[-1])[:10],
             "total_candles": len(df),
         }
-        report_text = generate_report(results, args.strategy, config, data_info=data_info)
+        report_text = generate_report(
+            results,
+            args.strategy,
+            config,
+            data_info=data_info,
+            data=df,
+            fee_model=fee_model,
+        )
         Path(args.output).write_text(report_text)
         print(f"Report saved to {args.output}")
 

@@ -161,7 +161,7 @@ results = walk_forward(
 
 ## Testing
 
-![Tests](https://img.shields.io/badge/tests-162%20passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-179%20passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)
 
 ```bash
 pytest --cov=backtester --cov-fail-under=90

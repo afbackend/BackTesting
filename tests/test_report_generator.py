@@ -158,9 +158,41 @@ def test_significant_windows_count_in_report():
     assert "Significant windows:" in report
 
 
-# --- baselines placeholder ---
+# --- baselines ---
 
-def test_baselines_section_has_placeholder():
+def test_baselines_section_without_data_shows_unavailable():
     results = make_results()
     report = generate_report(results, "TestStrategy", FrameworkConfig())
-    assert "not implemented in v1.0" in report
+    assert "Baselines unavailable" in report
+
+
+def test_baselines_section_with_data_shows_comparison():
+    data = make_data(300, drift=0.05)
+    wf_config = WalkForwardConfig(train_size=100, test_size=50, step_size=50,
+                                  min_trades_per_window=1)
+    results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), wf_config)
+    report = generate_report(
+        results, "TestStrategy", FrameworkConfig(),
+        data=data, fee_model=FeeModel(),
+    )
+    assert "Buy-and-hold" in report
+    assert "Random entry" in report
+    assert "p-value (strategy vs random" in report
+
+
+def test_conclusion_includes_beats_random_when_data_provided():
+    data = make_data(300, drift=5.0)
+    wf_config = WalkForwardConfig(train_size=100, test_size=50, step_size=50,
+                                  min_trades_per_window=1)
+    results = walk_forward(data, AlwaysLongStrategy(), FeeModel(), wf_config)
+    report = generate_report(
+        results, "TestStrategy", FrameworkConfig(),
+        data=data, fee_model=FeeModel(),
+    )
+    assert "beats random entry" in report
+
+
+def test_conclusion_omits_beats_random_without_data():
+    results = make_results()
+    report = generate_report(results, "TestStrategy", FrameworkConfig())
+    assert "beats random entry" not in report
