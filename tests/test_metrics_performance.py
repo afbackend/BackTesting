@@ -1,9 +1,10 @@
 import math
 import pytest
+import numpy as np
 import pandas as pd
 
 from backtester.core.bt_types import Direction, Trade
-from backtester.metrics.performance import calculate_performance
+from backtester.metrics.performance import _SECONDS_PER_YEAR, calculate_performance
 
 
 def make_trade(net_return: float, days_offset: int = 0) -> Trade:
@@ -150,3 +151,63 @@ def test_trades_per_day():
     m = calculate_performance(trades)
     # span = exit_time[-1] - entry_time[0] = day11 - day0 = 11 days
     assert m["trades_per_day"] == pytest.approx(2 / 11)
+
+
+def test_trades_per_day_sub_day():
+    # Two trades with total span of 8 hours.
+    # Old bug: (exit[-1] - entry[0]).days == 0 → float(2) = 2.0 (wrong)
+    # Fix: total_seconds() / 86400 = 0.333 days → 2 / 0.333 ≈ 6.0
+    base = pd.Timestamp("2024-01-01")
+    gross = 0.012
+    def _trade(entry_h, exit_h):
+        return Trade(
+            entry_time=base + pd.Timedelta(hours=entry_h),
+            exit_time=base + pd.Timedelta(hours=exit_h),
+            direction=Direction.LONG,
+            entry_price=100.0,
+            exit_price=100.0 * (1 + gross),
+            gross_return=gross,
+            fee=0.002,
+            net_return=0.01,
+            holding_candles=2,
+            max_adverse=0.0,
+        )
+    trades = [_trade(0, 4), _trade(4, 8)]
+    m = calculate_performance(trades)
+    span_days = 8 / 24
+    assert m["trades_per_day"] == pytest.approx(2 / span_days)
+
+
+def test_trades_per_day_zero_span_returns_inf():
+    base = pd.Timestamp("2024-01-01")
+    gross = 0.012
+    t = Trade(
+        entry_time=base,
+        exit_time=base,
+        direction=Direction.LONG,
+        entry_price=100.0,
+        exit_price=100.0 * (1 + gross),
+        gross_return=gross,
+        fee=0.002,
+        net_return=0.01,
+        holding_candles=0,
+        max_adverse=0.0,
+    )
+    assert calculate_performance([t])["trades_per_day"] == float("inf")
+
+
+# --- Sharpe calendar-time annualization ---
+
+def test_sharpe_uses_calendar_time_annualization():
+    trades = [make_trade(0.02, i) for i in range(5)]
+    trades += [make_trade(-0.005, i) for i in range(5, 10)]
+    m = calculate_performance(trades)
+
+    returns = np.array([t.net_return for t in trades])
+    mean_r = float(np.mean(returns))
+    std_r = float(np.std(returns, ddof=1))
+    span_seconds = (trades[-1].exit_time - trades[0].entry_time).total_seconds()
+    ann = math.sqrt(len(trades) * _SECONDS_PER_YEAR / span_seconds)
+    expected = mean_r / std_r * ann
+
+    assert m["sharpe_ratio"] == pytest.approx(expected, rel=1e-6)
