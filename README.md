@@ -72,9 +72,7 @@ backtester/
 │   └── risk.py            # Drawdown, MAE, consecutive loss streak
 │
 ├── report/
-│   ├── generator.py       # Generates markdown report automatically
-│   └── templates/
-│       └── sprint_report.md
+│   └── generator.py       # Generates markdown report automatically
 │
 ├── config.py              # Global parameters with sensible defaults
 └── run.py                 # CLI entry point
@@ -190,8 +188,8 @@ CI runs on every push via GitHub Actions (`.github/workflows/tests.yml`).
 | `config.py` | ✅ | Global parameters with defaults |
 | `report/generator.py` | ✅ | Markdown report with auto conclusion |
 | `cli.py` / `run.py` | ✅ | CLI entry point |
-| `data/fetcher.py` | ⬜ | Fetch from exchanges with retry |
-| `strategy/examples/funding_rate.py` | ⬜ | H3 reference implementation |
+| `data/fetcher.py` | ✅ | Fetch from exchanges with retry |
+| `strategy/examples/funding_rate.py` | ✅ | H3 reference implementation |
 
 ---
 
@@ -205,8 +203,6 @@ CI runs on every push via GitHub Actions (`.github/workflows/tests.yml`).
 | Realistic execution | Entry at next candle's open, not at signal candle's close. |
 | Warmup enforced | The framework discards `warmup_periods()` candles before the first signal. |
 | One-tailed t-test | Hypothesis test is always H1: return > 0, never two-tailed. |
-| Mandatory benchmarks | Every result includes comparison against buy-and-hold, random entry, and the inverse strategy. |
-| Reproducible | Fixed seed (`random_seed=42`), no hidden randomization. |
 
 ---
 
@@ -247,7 +243,6 @@ Each run generates a markdown report with:
    - OOS p-value < 0.05
    - OOS win rate > 52%
    - OOS edge > 0 after fee
-   - Beats random entry with significance
    - Max drawdown < 25%
 
 ---
@@ -260,7 +255,7 @@ This framework was built during a structured research process documented in thre
 - **Sprint 2** added regime detection via daily EMA50, improving in-sample results to 57% win rate and +11.5% return — but without out-of-sample validation.
 - **Sprint 3** applied walk-forward validation and revealed that the in-sample edge was a statistical artifact. Win rate dropped from 57% to 32% out-of-sample. The strategy was invalidated.
 
-Every design decision in this framework exists to prevent a specific failure mode discovered during those sprints. The full research reports are available in the `docs/` directory.
+Every design decision in this framework exists to prevent a specific failure mode discovered during those sprints.
 
 ---
 
@@ -272,7 +267,6 @@ Every design decision in this framework exists to prevent a specific failure mod
 - Maximum adverse excursion tracking
 - Statistical significance testing (one-tailed t-test)
 - Automatic report generation with objective conclusions
-- Mandatory baseline comparison
 
 ## Out of scope for v1.0
 
@@ -300,8 +294,6 @@ min_trades_per_window = 10   # windows with fewer trades are discarded
 p_value_threshold = 0.05
 min_win_rate = 0.52
 max_acceptable_drawdown = -0.25
-random_entry_simulations = 100
-random_seed = 42
 ```
 
 ---

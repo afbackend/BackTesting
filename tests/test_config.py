@@ -12,15 +12,12 @@ def test_defaults():
     assert cfg.p_value_threshold == 0.05
     assert cfg.min_win_rate == 0.52
     assert cfg.max_acceptable_drawdown == -0.25
-    assert cfg.random_entry_simulations == 100
-    assert cfg.random_seed == 42
 
 
 def test_override_fields():
-    cfg = FrameworkConfig(taker_fee=0.002, train_size=1000, random_seed=0)
+    cfg = FrameworkConfig(taker_fee=0.002, train_size=1000)
     assert cfg.taker_fee == 0.002
     assert cfg.train_size == 1000
-    assert cfg.random_seed == 0
     # Non-overridden fields keep defaults
     assert cfg.test_size == 100
     assert cfg.min_win_rate == 0.52

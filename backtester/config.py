@@ -12,5 +12,3 @@ class FrameworkConfig:
     p_value_threshold: float = 0.05
     min_win_rate: float = 0.52
     max_acceptable_drawdown: float = -0.25
-    random_entry_simulations: int = 100
-    random_seed: int = 42
